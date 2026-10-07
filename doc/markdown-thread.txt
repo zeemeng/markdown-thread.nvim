@@ -1,0 +1,87 @@
+*markdown-thread.txt*  Discussion threads in Markdown (spec v0.1)
+
+==============================================================================
+CONTENTS                                              *markdown-thread*
+
+  1. Format ................................ |markdown-thread-format|
+  2. Setup ................................. |markdown-thread-setup|
+  3. Rendering ............................. |markdown-thread-render|
+  4. Commands and keys ..................... |markdown-thread-commands|
+  5. Enter in threads ...................... |markdown-thread-enter|
+  6. Completion ............................ |markdown-thread-cmp|
+  7. Highlights ............................ |markdown-thread-highlights|
+
+==============================================================================
+1. Format                                             *markdown-thread-format*
+
+A thread is a block quote whose first line starts with `[?label]`. Anchors
+`[?label]` in the text point at it; `==text== [?label]` marks a range.
+Marker lines: `-->` you, `<--` a responder, `+++` closed. The state comes
+from the last item: question or `-->` open, `<--` answered, `+++` closed.
+See markdown-thread's SPEC.md for the full rules.
+
+==============================================================================
+2. Setup                                               *markdown-thread-setup*
+
+>lua
+  require("markdown-thread").setup({
+    author = nil,          -- name on your --> and +++ lines
+    timestamp = false,     -- false | "date" | "datetime"
+    diagnostics = "save",  -- false | "save" | "change"
+    render = { enabled = true, tint = true },
+    annotator_label = "you",
+    keymaps = { new = false, followup = false, close = false,
+                list = false, next = false, prev = false },
+    cmp = true,            -- register the nvim-cmp source
+  })
+<
+==============================================================================
+3. Rendering                                          *markdown-thread-render*
+
+Rendering is done through render-markdown.nvim. Call
+`require("markdown-thread").marks(ctx)` from your render-markdown custom
+handler for the `markdown` language and append the result to your marks
+(see README). Marks that replace text are hidden on the cursor line.
+
+==============================================================================
+4. Commands and keys                                *markdown-thread-commands*
+
+:MdThread list [state]       Location list of threads.
+:MdThread next [open]        Next thread header (only open ones with "open").
+:MdThread prev [open]        Previous thread header.
+:[range]MdThread new         Anchor + thread. With a visual range the
+                             selection becomes ==selection== [?label];
+                             otherwise a point anchor goes after the word
+                             under the cursor. Asks for the label. An
+                             existing label only gets a new anchor.
+:MdThread followup           Blank > line and --> at the end of the thread
+                             under the cursor; starts insert mode.
+:MdThread close [reason]     Appends a +++ line.
+:MdThread check              Parser diagnostics into |vim.diagnostic|.
+
+Keys are set per Markdown buffer from the `keymaps` option.
+
+==============================================================================
+5. Enter in threads                                    *markdown-thread-enter*
+
+`require("markdown-thread").empty_quote_enter()` handles Enter on an empty
+`> ` line inside a thread and returns true; otherwise it returns false and
+changes nothing. The line becomes a blank `>` line and a new `> ` line
+follows. Enter on a second empty line in a row ends the thread, leaving a
+blank separator and an empty line for the cursor.
+
+==============================================================================
+6. Completion                                            *markdown-thread-cmp*
+
+nvim-cmp source `markdown_thread`: after `[?` in text it offers existing
+thread labels; at the start of a quote (`> [?`) it offers anchor labels that
+have no thread yet.
+
+==============================================================================
+7. Highlights                                     *markdown-thread-highlights*
+
+MdThreadLine MdThreadLabel MdThreadOpen MdThreadAnswered MdThreadClosed
+MdThreadEmpty MdThreadDuplicate MdThreadOrphan MdThreadAnnotator
+MdThreadResponder MdThreadMeta
+
+ vim:tw=78:ts=8:ft=help:norl:
