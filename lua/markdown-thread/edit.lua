@@ -267,11 +267,90 @@ local function insert_thread(buf, doc, row, label)
   vim.cmd("startinsert!")
 end
 
+--- Words for an automatic label: whitespace-separated, without anchor
+--- tokens, link destinations, brackets and surrounding ASCII punctuation.
+local function label_words(text)
+  text = text:gsub("%[%?[^%[%]]*%]", " "):gsub("%]%b()", "]"):gsub("[%[%]]", " ")
+  local words = {}
+  for w in text:gmatch("%S+") do
+    w = w:gsub("^%p+", ""):gsub("%p+$", "")
+    if w ~= "" then
+      words[#words + 1] = w
+    end
+  end
+  return words
+end
+
+--- Label for a new thread when none is given: the first three words of
+--- `text`, one more word while the label is taken, else "threadN" with the
+--- smallest free N. Taken: thread labels, unmatched `[?x]` tokens and link
+--- definitions (a new thread would capture or clash with them).
+function M.auto_label(doc, text)
+  local taken = {}
+  for _, t in ipairs(doc.threads) do
+    taken[t.key] = true
+  end
+  for _, o in ipairs(doc.orphans) do
+    taken[o.key] = true
+  end
+  for key in pairs(doc.linkdefs) do
+    taken[key] = true
+  end
+  local words = label_words(text or "")
+  for n = math.min(3, #words), #words do
+    if n > 0 then
+      local label = table.concat(words, " ", 1, n)
+      if not taken[P.label_key(label)] then
+        return label
+      end
+    end
+  end
+  local i = 1
+  while taken["thread" .. i] do
+    i = i + 1
+  end
+  return "thread" .. i
+end
+
+--- Byte index (1-based, inclusive) of the end of the character at 0-based
+--- column `col` of `line`; `$` selections report a huge column.
+local function char_end(line, col)
+  if col >= #line then
+    return #line
+  end
+  return col + 1 + vim.str_utf_end(line, col + 1)
+end
+
+local function range_text(lines, range)
+  local srow, scol, erow, ecol = unpack(range)
+  local parts = {}
+  for r = srow, erow do
+    local l = lines[r]
+    local e = r == erow and char_end(l, ecol) or #l
+    parts[#parts + 1] = l:sub(r == srow and scol + 1 or 1, e)
+  end
+  return table.concat(parts, " ")
+end
+
+--- Byte column (0-based) where a point anchor goes for the cursor at 0-based
+--- column `ccol`: after the word under the cursor, or at the cursor on space.
+function M.point_col(line, ccol)
+  local col = ccol + 1
+  if line:sub(col, col):find("%S") then
+    return (line:find("%s", col) or (#line + 1)) - 1
+  end
+  return col - 1
+end
+
 local function with_label(opts, fn)
   if opts.label then
     return fn(opts.label)
   end
-  vim.ui.input({ prompt = "Thread label: " }, function(input)
+  vim.ui.input({ prompt = "Thread label (empty: automatic): " }, function(input)
+    -- the built-in prompt and answer stay on the command line (nothing
+    -- overwrites them with 'noshowmode'); clearing needs a redraw and an
+    -- empty echo, neither alone does it
+    vim.cmd('redraw | echo ""')
     if input then
       fn(input)
     end
@@ -281,7 +360,9 @@ end
 --- New anchor (and thread, unless the label already has one).
 --- opts.range = { srow, scol, erow, ecol } (1-based rows, 0-based byte cols,
 --- end inclusive) anchors a highlight; otherwise a point anchor goes after
---- the word under the cursor. opts.label skips the prompt.
+--- the word under the cursor. opts.label skips the prompt; a blank label
+--- (or prompt answer) gets an automatic one from the anchored text, see
+--- M.auto_label.
 function M.new(opts)
   opts = opts or {}
   local buf = api.nvim_get_current_buf()
@@ -292,6 +373,17 @@ function M.new(opts)
     return notify("anchors go in body text (not code, front matter or threads)", vim.log.levels.WARN)
   end
   with_label(opts, function(label)
+    if P.label_key(label) == "" then
+      local text
+      if opts.range then
+        text = range_text(doc.lines, opts.range)
+      else
+        local line = doc.lines[row]
+        -- the word the anchor follows
+        text = line:sub(1, M.point_col(line, cur[2])):match("(%S*)%s*$")
+      end
+      label = M.auto_label(doc, text)
+    end
     local ok, err = valid_label(label)
     if not ok then
       return notify(err, vim.log.levels.ERROR)
@@ -302,25 +394,13 @@ function M.new(opts)
     local anchor_row
     if opts.range then
       local srow, scol, erow, ecol = unpack(opts.range)
-      local eline = doc.lines[erow]
-      -- end of the last selected character (multi-byte safe; `$` selections
-      -- report a huge column)
-      local eend = #eline
-      if ecol < #eline then
-        eend = ecol + 1 + vim.str_utf_end(eline, ecol + 1)
-      end
+      -- end of the last selected character (multi-byte safe)
+      local eend = char_end(doc.lines[erow], ecol)
       api.nvim_buf_set_text(buf, erow - 1, eend, erow - 1, eend, { "==" .. token })
       api.nvim_buf_set_text(buf, srow - 1, scol, srow - 1, scol, { "==" })
       anchor_row = erow
     else
-      local line = doc.lines[row]
-      local col = cur[2] + 1
-      local e = col
-      if line:sub(col, col):find("%S") then
-        e = (line:find("%s", col) or (#line + 1)) - 1
-      else
-        e = col - 1
-      end
+      local e = M.point_col(doc.lines[row], cur[2])
       api.nvim_buf_set_text(buf, row - 1, e, row - 1, e, { token })
       anchor_row = row
     end

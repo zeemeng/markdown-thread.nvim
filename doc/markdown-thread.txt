@@ -53,7 +53,11 @@ handler for the `markdown` language and append the result to your marks
                              selection becomes ==selection== [?label];
                              otherwise a point anchor goes after the word
                              under the cursor. Asks for the label. An
-                             existing label only gets a new anchor.
+                             existing label only gets a new anchor. An
+                             empty answer names the thread from the first
+                             three words of the selection (the word for a
+                             point anchor), adding a word while the name is
+                             taken, else thread1, thread2, ...
 :MdThread followup           Blank > line and --> at the end of the thread
                              under the cursor; starts insert mode.
 :MdThread close [reason]     Appends a +++ line.
