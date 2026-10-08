@@ -87,7 +87,7 @@ in Markdown buffers.
 
 | Command | Does |
 |---|---|
-| `:MdThread list [state]` | location list of threads (`open`, `answered`, `closed`, `empty`, `duplicate`) |
+| `:MdThread list [state]` | location list of threads (`open`, `answered`, `closed`, `empty`, `duplicate`); updates as the buffer changes |
 | `:MdThread next [open]` / `prev [open]` | jump to the next/previous thread header |
 | `:MdThread new` | point anchor after the word under the cursor + thread; with a visual range, `==selection== [?label]`. An empty label is made from the first three words of the selection (one more while taken), else `thread1`, `thread2`, … |
 | `:MdThread followup` | blank `>` line + `-->` at the end of the thread under the cursor |

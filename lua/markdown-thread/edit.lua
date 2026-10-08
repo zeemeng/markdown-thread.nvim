@@ -167,20 +167,57 @@ function M.items(buf, state)
         col = 1,
         text = ("[%s] %s%s"):format(st, t.label, first ~= "" and (": " .. first) or ""),
         type = st == "open" and "W" or (st == "duplicate" and "E" or "I"),
+        user_data = t.key, -- keeps the selected thread across refreshes
       }
     end
   end
   return items
 end
 
+--- setloclist() `what` for the thread list of buf. The context marks the
+--- list as ours, so M.refresh_lists can find and rebuild it.
+local function list_what(buf, state)
+  return {
+    title = "markdown threads" .. (state and (" (" .. state .. ")") or ""),
+    items = M.items(buf, state),
+    context = { markdown_thread = { buf = buf, state = state } },
+  }
+end
+
 function M.list(state)
   local buf = api.nvim_get_current_buf()
-  local items = M.items(buf, state)
-  vim.fn.setloclist(0, {}, " ", { title = "markdown threads" .. (state and (" (" .. state .. ")") or ""), items = items })
-  if #items == 0 then
+  local what = list_what(buf, state)
+  vim.fn.setloclist(0, {}, " ", what)
+  if #what.items == 0 then
     return notify("no threads")
   end
   vim.cmd("lopen")
+end
+
+--- Rebuild every thread list (from M.list) of buf that is the current list
+--- of some window's location-list stack: same filter, the selected thread
+--- stays selected (else the same position). No window opens or gets focus.
+function M.refresh_lists(buf)
+  local seen = {}
+  for _, win in ipairs(api.nvim_list_wins()) do
+    local info = vim.fn.getloclist(win, { id = 0, context = 0, idx = 0, items = 0 })
+    local ctx = type(info.context) == "table" and info.context.markdown_thread
+    if info.id ~= 0 and not seen[info.id] and type(ctx) == "table" and ctx.buf == buf then
+      seen[info.id] = true
+      local what = list_what(buf, ctx.state)
+      local old = info.items[info.idx]
+      local idx = math.min(info.idx, #what.items)
+      for i, item in ipairs(what.items) do
+        if old and item.user_data == old.user_data then
+          idx = i
+          break
+        end
+      end
+      what.id = info.id
+      what.idx = idx > 0 and idx or nil
+      vim.fn.setloclist(win, {}, "r", what)
+    end
+  end
 end
 
 M.ns = api.nvim_create_namespace("markdown-thread")

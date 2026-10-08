@@ -46,7 +46,10 @@ handler for the `markdown` language and append the result to your marks
 ==============================================================================
 4. Commands and keys                                *markdown-thread-commands*
 
-:MdThread list [state]       Location list of threads.
+:MdThread list [state]       Location list of threads. It follows edits
+                             (after a change in Normal mode and on leaving
+                             Insert mode): states, new and removed threads,
+                             the filter; the selected thread stays selected.
 :MdThread next [open]        Next thread header (only open ones with "open").
 :MdThread prev [open]        Previous thread header.
 :[range]MdThread new         Anchor + thread. With a visual range the

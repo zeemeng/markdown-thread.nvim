@@ -101,6 +101,14 @@ function M.attach(buf)
       end
     end
   end
+  -- open thread lists (:MdThread list) follow the buffer
+  vim.api.nvim_create_autocmd({ "TextChanged", "InsertLeave" }, {
+    group = vim.api.nvim_create_augroup("MarkdownThreadList" .. buf, {}),
+    buffer = buf,
+    callback = function()
+      M.edit.refresh_lists(buf)
+    end,
+  })
   local diag = C.options.diagnostics
   if diag then
     local group = vim.api.nvim_create_augroup("MarkdownThreadDiag" .. buf, {})
