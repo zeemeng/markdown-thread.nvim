@@ -1,5 +1,5 @@
 -- markdown-thread.nvim: render, write and navigate Markdown Thread
--- discussions (markdown-thread SPEC.md v0.1).
+-- discussions (markdown-thread SPEC.md v0.2).
 local C = require("markdown-thread.config")
 
 local M = {}

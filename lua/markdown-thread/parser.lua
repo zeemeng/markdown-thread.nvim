@@ -1,4 +1,4 @@
--- Markdown Thread spec v0.1 parser (port of markdown-thread's reference
+-- Markdown Thread spec v0.2 parser (port of markdown-thread's reference
 -- parser, skill/markdown-thread/scripts/mdthread.py). Produces the same model
 -- and diagnostics; tests compare both against markdown-thread's fixtures.
 --
@@ -9,7 +9,7 @@
 
 local M = {}
 
-M.SPEC_VERSION = "0.1"
+M.SPEC_VERSION = "0.2"
 
 ---------------------------------------------------------------------------
 -- small helpers
@@ -532,7 +532,7 @@ function Document:_quote(s, e)
     if iq then
       local il = label_token_at_start(first:sub(iq))
       if il and M.label_key(il) ~= "" then
-        self:diag("warning", "nested-thread", s, "threads nested in block quotes are not supported in v0.1")
+        self:diag("warning", "nested-thread", s, "threads nested in block quotes are not supported in v0.2")
       end
     end
     return

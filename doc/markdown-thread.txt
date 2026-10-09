@@ -1,4 +1,4 @@
-*markdown-thread.txt*  Discussion threads in Markdown (spec v0.1)
+*markdown-thread.txt*  Discussion threads in Markdown (spec v0.2)
 
 ==============================================================================
 CONTENTS                                              *markdown-thread*

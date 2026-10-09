@@ -1,6 +1,6 @@
 # markdown-thread.nvim
 
-Neovim support for [Markdown Thread](../markdown-thread/SPEC.md) (spec v0.1):
+Neovim support for [Markdown Thread](../markdown-thread/SPEC.md) (spec v0.2):
 discussion threads inside Markdown documents.
 
 ```markdown
